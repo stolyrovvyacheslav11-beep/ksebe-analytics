@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Банная аналитика</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #f8fafc; color: #111; }
+  .hero { max-width: 680px; margin: 0 auto; padding: 80px 24px 40px; text-align: center; }
+  h1 { font-size: 42px; font-weight: 800; margin-bottom: 16px; }
+  h1 span { color: #2563eb; }
+  p { font-size: 18px; color: #555; line-height: 1.6; margin-bottom: 32px; }
+  .badges { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+            margin-bottom: 48px; }
+  .badge { background: #eff6ff; color: #1d4ed8; border-radius: 999px;
+           padding: 8px 18px; font-size: 14px; font-weight: 500; }
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+              gap: 20px; max-width: 900px; margin: 0 auto 60px; padding: 0 24px; }
+  .feature { background: #fff; border-radius: 14px; padding: 24px;
+             box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+  .feature .icon { font-size: 28px; margin-bottom: 12px; }
+  .feature h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .feature p { font-size: 14px; color: #666; margin: 0; }
+  footer { text-align: center; padding: 24px; font-size: 13px; color: #999; }
+</style>
+</head>
+<body>
+<div class="hero">
+  <h1>Банная <span>аналитика</span></h1>
+  <p>Полная аналитика вашего бизнеса прямо внутри YCLIENTS — записи, финансы, клиенты и сотрудники в одном дашборде.</p>
+  <div class="badges">
+    <span class="badge">Записи и визиты</span>
+    <span class="badge">Финансы и выручка</span>
+    <span class="badge">Клиентская база</span>
+    <span class="badge">Загрузка сотрудников</span>
+  </div>
+</div>
+
+<div class="features">
+  <div class="feature">
+    <div class="icon">📊</div>
+    <h3>Финансовая аналитика</h3>
+    <p>Выручка, расходы, прибыль и динамика по дням за любой период</p>
+  </div>
+  <div class="feature">
+    <div class="icon">📅</div>
+    <h3>Записи и конверсия</h3>
+    <p>Сколько записей выполнено, отменено, каков процент посещаемости</p>
+  </div>
+  <div class="feature">
+    <div class="icon">👥</div>
+    <h3>Клиентская база</h3>
+    <p>Новые клиенты, возвращаемость, LTV и сегментация</p>
+  </div>
+  <div class="feature">
+    <div class="icon">💼</div>
+    <h3>Сотрудники</h3>
+    <p>Загрузка и выручка по каждому мастеру, топ исполнителей</p>
+  </div>
+</div>
+
+<footer>Банная аналитика © 2024 — интеграция с YCLIENTS</footer>
+</body>
+</html>

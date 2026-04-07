@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Аналитика — KSEBE</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #f1f5f9; color: #111; font-size: 14px; }
+  .topbar { background: #fff; border-bottom: 1px solid #e5e7eb;
+            padding: 0 24px; display: flex; align-items: center;
+            gap: 16px; height: 52px; }
+  .topbar .logo { font-weight: 700; font-size: 16px; color: #2563eb; }
+  .topbar .salon { color: #888; font-size: 13px; margin-left: auto; }
+  .tabs { display: flex; gap: 4px; padding: 4px; }
+  .tab { padding: 6px 14px; border-radius: 8px; cursor: pointer;
+         font-size: 13px; color: #555; border: none; background: none; }
+  .tab.active { background: #eff6ff; color: #2563eb; font-weight: 500; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px; }
+  .period-row { display: flex; gap: 8px; margin-bottom: 20px; }
+  .period-btn { padding: 7px 16px; border: 1.5px solid #e5e7eb; border-radius: 8px;
+                background: #fff; cursor: pointer; font-size: 13px; color: #555; }
+  .period-btn.active { border-color: #2563eb; color: #2563eb;
+                       background: #eff6ff; font-weight: 500; }
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+             gap: 12px; margin-bottom: 20px; }
+  .metric { background: #fff; border-radius: 12px; padding: 16px 18px; }
+  .metric-label { font-size: 12px; color: #888; margin-bottom: 6px; }
+  .metric-value { font-size: 22px; font-weight: 600; }
+  .metric-sub { font-size: 11px; color: #aaa; margin-top: 3px; }
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+                margin-bottom: 16px; }
+  .chart-card { background: #fff; border-radius: 12px; padding: 18px; }
+  .chart-title { font-size: 13px; font-weight: 500; margin-bottom: 14px; color: #444; }
+  .full-card { background: #fff; border-radius: 12px; padding: 18px;
+               margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: #888; font-weight: 500;
+       padding: 7px 10px; border-bottom: 1px solid #f1f5f9; }
+  td { padding: 9px 10px; border-bottom: 1px solid #f8fafc; }
+  .status { display: inline-block; padding: 2px 9px; border-radius: 99px;
+            font-size: 11px; font-weight: 500; }
+  .s-done { background: #dcfce7; color: #15803d; }
+  .s-cancel { background: #fee2e2; color: #b91c1c; }
+  .s-wait { background: #fef9c3; color: #854d0e; }
+  .loading { display: flex; align-items: center; justify-content: center;
+             height: 200px; color: #aaa; font-size: 15px; }
+  .section-title { font-size: 11px; font-weight: 600; color: #aaa;
+                   text-transform: uppercase; letter-spacing: .06em;
+                   margin: 4px 0 12px; }
+  @media (max-width: 600px) { .charts-row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="logo">Банная аналитика</span>
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('overview')">Обзор</button>
+    <button class="tab" onclick="showTab('staff')">Сотрудники</button>
+    <button class="tab" onclick="showTab('services')">Услуги</button>
+    <button class="tab" onclick="showTab('records')">Записи</button>
+  </div>
+  <span class="salon">Филиал #{{ salon_id }}</span>
+</div>
+
+<div class="wrap">
+  <div class="period-row">
+    <button class="period-btn" onclick="setPeriod(7)">7 дней</button>
+    <button class="period-btn active" onclick="setPeriod(30)">30 дней</button>
+    <button class="period-btn" onclick="setPeriod(90)">90 дней</button>
+  </div>
+
+  <div id="loading" class="loading">Загружаем данные...</div>
+  <div id="content" style="display:none">
+
+    <!-- Обзор -->
+    <div id="tab-overview">
+      <div class="section-title">Ключевые показатели</div>
+      <div class="metrics" id="metrics"></div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">Записей по дням</div>
+          <div style="position:relative;height:200px">
+            <canvas id="chartRecords" role="img" aria-label="Записей по дням"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Выручка по дням, ₽</div>
+          <div style="position:relative;height:200px">
+            <canvas id="chartRevenue" role="img" aria-label="Выручка по дням"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">Статусы записей</div>
+          <div style="position:relative;height:200px">
+            <canvas id="chartStatus" role="img" aria-label="Статусы записей"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Топ услуг</div>
+          <div style="position:relative;height:200px">
+            <canvas id="chartServices" role="img" aria-label="Топ услуг"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Сотрудники -->
+    <div id="tab-staff" style="display:none">
+      <div class="full-card">
+        <div class="chart-title">Загрузка сотрудников (кол-во записей)</div>
+        <div id="staffChartWrap" style="position:relative">
+          <canvas id="chartStaff" role="img" aria-label="Загрузка сотрудников"></canvas>
+        </div>
+      </div>
+      <div class="full-card">
+        <div class="chart-title">Выручка по сотрудникам, ₽</div>
+        <div id="staffRevChartWrap" style="position:relative">
+          <canvas id="chartStaffRev" role="img" aria-label="Выручка по сотрудникам"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Услуги -->
+    <div id="tab-services" style="display:none">
+      <div class="full-card" id="servicesTable"></div>
+    </div>
+
+    <!-- Записи -->
+    <div id="tab-records" style="display:none">
+      <div class="full-card" id="recordsTable">
+        <div class="chart-title">Последние 50 записей</div>
+        <div style="overflow-x:auto"><table id="recTable">
+          <thead><tr>
+            <th>Клиент</th><th>Дата</th><th>Услуга</th>
+            <th>Мастер</th><th>Статус</th>
+          </tr></thead>
+          <tbody id="recBody"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SALON_ID = {{ salon_id }};
+let currentPeriod = 30;
+let currentTab = 'overview';
+let charts = {};
+let cachedData = null;
+
+function showTab(tab) {
+  currentTab = tab;
+  ['overview','staff','services','records'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach((b, i) => {
+    b.classList.toggle('active', ['overview','staff','services','records'][i] === tab);
+  });
+  if (cachedData) renderTab(cachedData);
+}
+
+function setPeriod(days) {
+  currentPeriod = days;
+  document.querySelectorAll('.period-btn').forEach((b, i) => {
+    b.classList.toggle('active', [7,30,90][i] === days);
+  });
+  loadData();
+}
+
+async function loadData() {
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('content').style.display = 'none';
+  try {
+    const res = await fetch(`/api/data/${SALON_ID}?days=${currentPeriod}`);
+    cachedData = await res.json();
+    renderAll(cachedData);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = '';
+  } catch(e) {
+    document.getElementById('loading').textContent = 'Ошибка загрузки данных';
+  }
+}
+
+function renderAll(d) {
+  renderMetrics(d.metrics);
+  renderCharts(d);
+  renderTab(d);
+}
+
+function renderTab(d) {
+  if (currentTab === 'staff') renderStaffCharts(d);
+  if (currentTab === 'services') renderServicesTable(d);
+  if (currentTab === 'records') renderRecordsTable(d);
+}
+
+function renderMetrics(m) {
+  const items = [
+    ['Записей',     m.records,                  `за ${currentPeriod} дней`],
+    ['Выручка',     m.revenue.toLocaleString('ru') + ' ₽', `расходы: ${m.expenses.toLocaleString('ru')} ₽`],
+    ['Прибыль',     m.profit.toLocaleString('ru') + ' ₽',  ''],
+    ['Конверсия',   m.conv_rate + '%',           `выполнено ${m.completed}`],
+    ['Клиентов',    m.clients,                  `новых: ${m.new_clients}`],
+    ['Отмен',       m.cancelled,                Math.round(m.cancelled / (m.records||1) * 100) + '%'],
+  ];
+  document.getElementById('metrics').innerHTML = items.map(([l, v, s]) => `
+    <div class="metric">
+      <div class="metric-label">${l}</div>
+      <div class="metric-value">${v}</div>
+      ${s ? `<div class="metric-sub">${s}</div>` : ''}
+    </div>`).join('');
+}
+
+function last30() {
+  const labels = [];
+  for (let i = currentPeriod - 1; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    labels.push(d.toISOString().split('T')[0]);
+  }
+  return labels;
+}
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+function renderCharts(d) {
+  const labels = last30();
+  const tc = '#666', gc = 'rgba(0,0,0,.06)';
+
+  destroyChart('records');
+  charts.records = new Chart(document.getElementById('chartRecords'), {
+    type: 'bar',
+    data: {
+      labels: labels.map(l => l.slice(5)),
+      datasets: [{ data: labels.map(l => d.by_day[l] || 0),
+                   backgroundColor: '#3b82f6', borderRadius: 4 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+               plugins:{legend:{display:false}},
+               scales:{ x:{ticks:{color:tc,font:{size:10}}, grid:{color:gc}},
+                        y:{ticks:{color:tc,font:{size:10}}, grid:{color:gc}} }}
+  });
+
+  destroyChart('revenue');
+  charts.revenue = new Chart(document.getElementById('chartRevenue'), {
+    type: 'line',
+    data: {
+      labels: labels.map(l => l.slice(5)),
+      datasets: [{ data: labels.map(l => Math.round(d.rev_by_day[l] || 0)),
+                   borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,.1)',
+                   fill: true, tension: .4, pointRadius: 2 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+               plugins:{legend:{display:false}},
+               scales:{ x:{ticks:{color:tc,font:{size:10}}, grid:{color:gc}},
+                        y:{ticks:{color:tc,font:{size:10}}, grid:{color:gc}} }}
+  });
+
+  const m = d.metrics;
+  const waiting = m.records - m.completed - m.cancelled;
+  destroyChart('status');
+  charts.status = new Chart(document.getElementById('chartStatus'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Выполнено', 'Отменено', 'Ожидает'],
+      datasets: [{ data: [m.completed, m.cancelled, Math.max(0, waiting)],
+                   backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
+                   borderWidth: 0 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+               plugins:{ legend:{ display:false } } }
+  });
+
+  destroyChart('services');
+  charts.services = new Chart(document.getElementById('chartServices'), {
+    type: 'doughnut',
+    data: {
+      labels: d.top_services.map(s => s[0]),
+      datasets: [{ data: d.top_services.map(s => s[1]),
+                   backgroundColor: ['#3b82f6','#10b981','#f59e0b','#ef4444',
+                                     '#8b5cf6','#ec4899','#14b8a6','#f97316'],
+                   borderWidth: 0 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+               plugins:{ legend:{ display:false } } }
+  });
+}
+
+function renderStaffCharts(d) {
+  const tc = '#666', gc = 'rgba(0,0,0,.06)';
+  const staffH = Math.max(220, d.staff_load.length * 44 + 60);
+  document.getElementById('staffChartWrap').style.height = staffH + 'px';
+  document.getElementById('staffRevChartWrap').style.height = staffH + 'px';
+
+  destroyChart('staffLoad');
+  charts.staffLoad = new Chart(document.getElementById('chartStaff'), {
+    type: 'bar',
+    data: {
+      labels: d.staff_load.map(s => s[0]),
+      datasets: [{ data: d.staff_load.map(s => s[1]),
+                   backgroundColor: '#3b82f6', borderRadius: 4 }]
+    },
+    options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+               plugins:{legend:{display:false}},
+               scales:{ x:{ticks:{color:tc,font:{size:11}}, grid:{color:gc}},
+                        y:{ticks:{color:tc,font:{size:11}}, grid:{display:false}} }}
+  });
+
+  destroyChart('staffRev');
+  charts.staffRev = new Chart(document.getElementById('chartStaffRev'), {
+    type: 'bar',
+    data: {
+      labels: d.staff_revenue.map(s => s[0]),
+      datasets: [{ data: d.staff_revenue.map(s => s[1]),
+                   backgroundColor: '#10b981', borderRadius: 4 }]
+    },
+    options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+               plugins:{legend:{display:false}},
+               scales:{ x:{ticks:{color:tc,font:{size:11},
+                               callback: v => v.toLocaleString('ru') + ' ₽'},
+                              grid:{color:gc}},
+                        y:{ticks:{color:tc,font:{size:11}}, grid:{display:false}} }}
+  });
+}
+
+function renderServicesTable(d) {
+  const rows = d.top_services.map(([name, cnt]) => {
+    const rev = d.svc_revenue[name] || 0;
+    return `<tr>
+      <td>${name}</td>
+      <td>${cnt}</td>
+      <td>${rev.toLocaleString('ru')} ₽</td>
+      <td>${cnt ? Math.round(rev / cnt).toLocaleString('ru') + ' ₽' : '—'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('servicesTable').innerHTML = `
+    <div class="chart-title">Топ услуг</div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th>Услуга</th><th>Записей</th><th>Выручка</th><th>Средний чек</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+}
+
+function renderRecordsTable(d) {
+  const records = (d.recent_records || []);
+  document.getElementById('recBody').innerHTML = records.map(r => {
+    const svc = (r.services || []).map(s => s.title).join(', ') || '—';
+    const client = (r.client || {}).name || (r.client || {}).phone || '—';
+    const master = (r.staff || {}).name || '—';
+    const dt = (r.date || '').slice(0, 16).replace('T', ' ');
+    const sid = r.status_id;
+    const [cls, lbl] = sid === 4 ? ['s-done','Выполнена'] :
+                       [3,5,6].includes(sid) ? ['s-cancel','Отменена'] :
+                       ['s-wait','Ожидает'];
+    return `<tr>
+      <td>${client}</td><td>${dt}</td><td>${svc}</td>
+      <td>${master}</td>
+      <td><span class="status ${cls}">${lbl}</span></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px">Нет данных</td></tr>';
+}
+
+loadData();
+</script>
+</body>
+</html>
